@@ -46,6 +46,10 @@ evidence/
 *.sqlite3
 samples/*.mp4
 
+# Separate projects
+portfolio/
+run_portfolio.bat
+
 # Environment variables
 .env
 
