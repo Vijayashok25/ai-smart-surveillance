@@ -1,0 +1,120 @@
+# =====================================================================
+# AI Smart Surveillance System Configuration
+# =====================================================================
+
+system:
+  log_level: "INFO"               # DEBUG, INFO, WARNING, ERROR
+  device: "auto"                  # "auto", "cpu", "cuda", "mps"
+
+video:
+  source: 0                       # Webcam index (0), video file path, or RTSP URL
+  queue_size: 2                   # Keep queue small to discard stale frames and minimize latency
+  reconnect_delay_sec: 2.0        # Delay between reconnection attempts
+  max_reconnect_attempts: 5       # Max retries before failing
+  fps_limit: 30                   # Target frame rate cap (null for unconstrained)
+
+preprocess:
+  frame_skip: 1                   # Process every Nth frame (1 = process all frames)
+  input_size: 640                 # Model input resolution (square letterbox)
+  denoise:
+    enabled: false                # Toggle image denoising
+    method: "bilateral"           # "bilateral" or "gaussian"
+  brightness_normalize:
+    enabled: false                # Histogram/CLAHE brightness equalization
+
+detection:
+  model_path: "yolov8n.pt"        # YOLOv8 model file or name (yolov8n, yolov8s, etc.)
+  confidence_threshold: 0.50      # Confidence score threshold
+  iou_threshold: 0.45             # NMS Intersection Over Union threshold
+  classes:                        # Target object classes to detect
+    - person
+    - backpack
+    - handbag
+    - suitcase
+    - car
+    - motorcycle
+    - bicycle
+    - knife
+
+tracking:
+  tracker_type: "bytetrack"       # "bytetrack" (built-in Ultralytics) or "centroid" (fallback)
+  max_trail_points: 30            # Number of historical centroid points for trajectory trail
+  max_disappeared_frames: 30      # Frames to keep lost tracks before purging (for centroid tracker)
+  max_distance_px: 80             # Max centroid movement distance between consecutive frames
+
+rules:
+  zone_intrusion:
+    enabled: true
+    name: "Restricted Zone Intrusion"
+    polygon:                      # Points in [x, y] original frame coordinates
+      - [150, 150]
+      - [650, 150]
+      - [650, 450]
+      - [150, 450]
+    target_classes:
+      - person
+    cooldown_sec: 5.0
+
+  loitering:
+    enabled: true
+    name: "Loitering Detected"
+    dwell_threshold_sec: 10.0     # Time (sec) an entity stays inside the zone before alerting
+    polygon:
+      - [150, 150]
+      - [650, 150]
+      - [650, 450]
+      - [150, 450]
+    target_classes:
+      - person
+    cooldown_sec: 10.0
+
+  abandoned_object:
+    enabled: true
+    name: "Abandoned Object"
+    stationary_threshold_sec: 10.0 # Time (sec) luggage stays stationary
+    proximity_radius_px: 150.0    # Distance in pixels: no person within this radius triggers alert
+    movement_threshold_px: 15.0   # Maximum movement allowed to still be considered stationary
+    target_classes:
+      - backpack
+      - handbag
+      - suitcase
+    cooldown_sec: 15.0
+
+  crowding:
+    enabled: true
+    name: "Crowd Surge / Overcrowding"
+    max_person_count: 5           # Trigger if person count exceeds this threshold
+    cooldown_sec: 10.0
+
+  after_hours:
+    enabled: true
+    name: "After-Hours Intrusion"
+    start_time: "22:00"           # 24h format (HH:MM)
+    end_time: "06:00"             # Wraps over midnight supported
+    target_classes:
+      - person
+    cooldown_sec: 15.0
+
+alerts:
+  evidence_dir: "evidence"
+  save_snapshots: true
+  save_clips: true
+  clip_pre_seconds: 5.0           # Pre-alert buffer duration
+  clip_post_seconds: 5.0          # Post-alert recording duration
+  audible_beep: false             # Optional system beep on alert trigger
+  telegram:
+    enabled: false                # Reads credentials from .env
+  email:
+    enabled: false                # Reads SMTP credentials from .env
+
+database:
+  db_path: "surveillance.db"
+
+visualization:
+  show_boxes: true
+  show_labels: true
+  show_trajectories: true
+  show_zones: true
+  show_fps: true
+  show_active_tracks: true
+  banner_display_sec: 3.0         # Duration to keep warning banner on live view
